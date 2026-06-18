@@ -1,4 +1,7 @@
-cmake_minimum_required(VERSION 3.28)
+# SPDX-License-Identifier: GPL-3.0-only
+# Copyright (c) 2026 wentywenty
+
+cmake_minimum_required(VERSION 3.22)
 
 find_package(soem CONFIG QUIET)
 
