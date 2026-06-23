@@ -13,7 +13,8 @@ jobs:
           - arch: amd64
             runner: ubuntu-22.04
           - arch: arm64
-            runner: ubuntu-22.04-arm
+            runner: [self-hosted, rk3588]
+            # runner: ubuntu-22.04-arm
 
     runs-on: ${{ matrix.runner }}
 
