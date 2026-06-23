@@ -9,6 +9,7 @@ include /usr/share/dpkg/architecture.mk
 	dh $@ --buildsystem=cmake --sourcedirectory=SOEM
 
 override_dh_auto_configure:
+	patch -d SOEM -p1 < lower-cmake-version.patch
 	dh_auto_configure -- \
 		-DCMAKE_BUILD_TYPE=Release \
 		-DBUILD_SHARED_LIBS=ON \
