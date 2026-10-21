@@ -17,7 +17,37 @@ jobs:
 
     runs-on: ${{ matrix.runner }}
 
+    env:
+      GIT_SSL_VERSION: tlsv1.2
+      GIT_HTTP_PROXY: ${{ matrix.arch == 'arm64' && vars.GIT_HTTP_PROXY || '' }}
+      GIT_CONFIG_COUNT: 2
+      GIT_CONFIG_KEY_0: http.version
+      GIT_CONFIG_VALUE_0: HTTP/1.1
+      GIT_CONFIG_KEY_1: http.maxRequests
+      GIT_CONFIG_VALUE_1: "1"
+
     steps:
+      - name: Configure Git transport
+        shell: bash
+        run: |
+          git config --global http.version HTTP/1.1
+          git config --global http.maxRequests 1
+          git config --global http.sslVersion tlsv1.2
+          if [[ -n "${GIT_HTTP_PROXY:-}" ]]; then
+            git config --global http.proxy "$GIT_HTTP_PROXY"
+          fi
+          git config --global http.postBuffer 524288000
+          git config --global http.lowSpeedLimit 1000
+          git config --global http.lowSpeedTime 600
+          git config --global core.compression 0
+      - name: Print self-hosted runner network
+        if: matrix.arch == 'arm64'
+        shell: bash
+        run: |
+          echo "hostname=$(hostname) user=$(id -un)"
+          ifconfig -a 2>/dev/null || ip -br addr
+          ip route || true
+          ss -ltnp 2>/dev/null | grep -E '(:15551|:5551)' || true
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
