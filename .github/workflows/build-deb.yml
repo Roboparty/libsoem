@@ -5,49 +5,16 @@ on:
 
 jobs:
   build:
-    name: Build ${{ matrix.arch }} package
     strategy:
-      fail-fast: false
       matrix:
         include:
           - arch: amd64
-            runner: ubuntu-24.04
+            os: ubuntu-24.04
           - arch: arm64
-            runner: [self-hosted, Linux, ARM64, "24.04"]
-
-    runs-on: ${{ matrix.runner }}
-
-    env:
-      GIT_SSL_VERSION: tlsv1.2
-      GIT_HTTP_PROXY: ${{ matrix.arch == 'arm64' && vars.GIT_HTTP_PROXY || '' }}
-      GIT_CONFIG_COUNT: 2
-      GIT_CONFIG_KEY_0: http.version
-      GIT_CONFIG_VALUE_0: HTTP/1.1
-      GIT_CONFIG_KEY_1: http.maxRequests
-      GIT_CONFIG_VALUE_1: "1"
-
+            os: [self-hosted, Linux, ARM64, "24.04"]
+    runs-on: ${{ matrix.os }}
     steps:
-      - name: Configure Git transport
-        shell: bash
-        run: |
-          git config --global http.version HTTP/1.1
-          git config --global http.maxRequests 1
-          git config --global http.sslVersion tlsv1.2
-          if [[ -n "${GIT_HTTP_PROXY:-}" ]]; then
-            git config --global http.proxy "$GIT_HTTP_PROXY"
-          fi
-          git config --global http.postBuffer 524288000
-          git config --global http.lowSpeedLimit 1000
-          git config --global http.lowSpeedTime 600
-          git config --global core.compression 0
-      - name: Print runner network
-        shell: bash
-        run: |
-          echo "hostname=$(hostname) user=$(id -un)"
-          ifconfig -a 2>/dev/null || ip -br addr
-          ip route || true
-          ss -ltnp 2>/dev/null | grep -E '(:15551|:5551)' || true
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v4
         with:
           submodules: recursive
@@ -70,25 +37,26 @@ jobs:
 
       - name: Install build dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential debhelper cmake pkg-config
+          sudo apt-get update -q
+          sudo apt-get install -y --no-install-recommends \
+            build-essential cmake dpkg-dev debhelper pkg-config
 
-      - name: Build Debian package
+      - name: Build deb package
         run: |
-          mkdir -p output
           dpkg-buildpackage -us -uc -b
-          mv ../*.deb output/
-          VERSION=$(dpkg-parsechangelog -S Version | cut -d'-' -f1)
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          mv ../*.deb .
 
-      - name: Upload Debian package
+          VERSION=$(dpkg-parsechangelog -S Version | cut -d'-' -f1 || echo "unknown")
+          echo "PKG_VERSION=$VERSION" >> $GITHUB_ENV
+
+      - name: Upload deb artifact
         uses: actions/upload-artifact@v4
         with:
-          name: libsoem-dev-${{ env.VERSION }}-${{ matrix.arch }}
-          path: output/*.deb
+          name: libsoem-dev-v${{ env.PKG_VERSION }}-${{ matrix.arch }}
+          path: "*.deb"
 
-      - name: Release to GitHub
+      - name: Upload to GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: output/*.deb
+          files: "*.deb"
