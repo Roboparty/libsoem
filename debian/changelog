@@ -1,3 +1,9 @@
+soem (2.0.1-1) stable; urgency=medium
+
+  * Use Ubuntu 24.04 runners and direct GitHub access for package builds.
+
+ -- wentywenty <2321901849@qq.com>  Wed, 28 Oct 2026 18:37:32 +0800
+
 soem (2.0.0-3) stable; urgency=medium
 
   * use self-hosted rk3588 runner for arm64 build
